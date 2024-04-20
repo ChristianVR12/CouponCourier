@@ -1,0 +1,25 @@
+{
+  "id": "com.example.coupon-courier",
+  "version": "0.0.1",
+  "name": "Coupon Courier",
+  "icon": "",
+  "permissions": [
+    {
+      "permission": "coupon_read",
+      "purpose": "List all your coupons and their details."
+    }
+  ],
+  "ui_extension": {
+    "views": [
+      {
+        "viewport": "stripe.dashboard.product.list",
+        "component": "App"
+      }
+    ],
+    "content_security_policy": {
+      "connect-src": null,
+      "image-src": null,
+      "purpose": ""
+    }
+  }
+}
