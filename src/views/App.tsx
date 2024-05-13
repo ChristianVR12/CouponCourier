@@ -1,13 +1,13 @@
 import {
   Box,
   ContextView,
-  Link,
   List,
   ListItem,
   Button,
-  TextField,
-  Inline,
-  FocusView
+  FocusView,
+  Select,
+  Link,
+  Icon
 } from "@stripe/ui-extension-sdk/ui";
 import type { ExtensionContextValue } from "@stripe/ui-extension-sdk/context";
 import {createHttpClient, STRIPE_API_KEY} from '@stripe/ui-extension-sdk/http_client';
@@ -20,12 +20,15 @@ const stripeClient = new Stripe(STRIPE_API_KEY, {
   apiVersion: '2023-10-16',
 })
 
+const getCouponDisplayName = (coupon: Stripe.Coupon) => {
+  return `${coupon.name} (Amoun Off: ${coupon.amount_off})`;
+};
+
 const ListCoupons = ({ userContext, environment }: ExtensionContextValue) => {
   const [openFocus, setOpenFocus] = useState<boolean>(false);
-  const [text, setText] = useState<string>("");
-  const [name, setName] = useState<string>("");
-
   const [coupons, setCoupons] = useState<Stripe.Coupon[]>();
+  const [selectedCoupon, setSelectedCoupon] =  useState<Stripe.Coupon>();
+
   const BASE_URL =
     environment.mode == "test"
       ? `https://dashboard.stripe.com/${environment.mode}`
@@ -36,52 +39,86 @@ const ListCoupons = ({ userContext, environment }: ExtensionContextValue) => {
     setCoupons(data.data);
   }, []);
 
+  const getCouponData = useCallback(async (couponId: string) => {
+    const data = await stripeClient.coupons.retrieve(couponId);
+    setSelectedCoupon(data);
+  }, []);
+
   useEffect(() => {
     getCoupons();
   }, [getCoupons]);
-
-  // For this example, we save the result in memory.
-  // You may wish to store this data on your backend in a real life scenario.
-  const handleSave = () => {
-    setName(text);
+  
+  const resetState = () => {
     setOpenFocus(false);
+    setSelectedCoupon(undefined);
   };
+
   return (
-    <ContextView title="Email Coupons to Customers">
+    <ContextView title="Welcome">
       <Box css={{ marginBottom: "medium" }}>
-        The FocusView provides a dedicated space to display info or complete
-        tasks. Click the button below to open the FocusView.
+        Design, Colors, and a message about CouponCourier 
       </Box>
 
       <Button type="primary" onPress={() => setOpenFocus(true)}>
-        Open
+        Manage Coupons
       </Button>
 
-      <Box css={{ marginTop: "medium" }}>
-        {name ? (
-          <Inline css={{ font: "bodyEmphasized" }}>Name: {name}</Inline>
-        ) : (
-          null
-        )}
-      </Box>
-
       <FocusView
-        title="Focus View"
+        title="Manage Coupons"
         shown={openFocus}
-        onClose={() => setOpenFocus(false)}
+        setShown={() => setOpenFocus(false)}
         primaryAction={
-          <Button type="primary" onPress={handleSave}>
+          <Button type="primary" onPress={resetState}>
             Save
           </Button>
         }
         secondaryAction={
-          <Button onPress={() => setOpenFocus(false)}>Cancel</Button>
+          <Button onPress={() => resetState()}>Cancel</Button>
         }
       >
-        <TextField
-          label="Add a name"
-          onChange={(e) => setText(e.target.value)}
-        />
+        <>
+        <Select
+        css={{width: 'fill'}}
+        name="coupon-selecter"
+        onChange={(e) => {
+          getCouponData(e.target.value);
+        }}
+        >
+          <option value=""></option>
+          {coupons &&
+            coupons.map((coupon) => (
+              <option key={coupon.id} value={coupon.id}>
+                {getCouponDisplayName(coupon)}
+              </option>
+            ))}
+        </Select>
+
+        {selectedCoupon && (
+          <List onAction={(id) => console.log(id)} aria-label="">
+            <Box css={{ 
+              marginTop: "medium",
+              width: "fill",
+              padding: "medium",
+            }}>
+            <ListItem
+              value={
+                <Button href={`${BASE_URL}/coupons/${selectedCoupon.id}`} type="primary" onPress={() => resetState()}>
+                  <Box css={{marginRight: 'xsmall'}}>
+                    <Icon name="coupon" />
+                  </Box>
+                  Edit
+                </Button>
+              }
+              // value={selectedCoupon.name}
+              id={selectedCoupon.id}
+              title="Name"
+              secondaryTitle={selectedCoupon.name}
+            />
+            </Box>
+          </List>
+        )}
+        </>
+
       </FocusView>
     </ContextView>
   );
